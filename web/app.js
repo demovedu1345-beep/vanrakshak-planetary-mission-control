@@ -56,7 +56,7 @@ async function ensureApiService(){
 
 async function api(path,opts={}){
   const method=String(opts.method||'GET').toUpperCase();
-  if(!/^\\/api\\/health(?:[?#]|$)/.test(path))await ensureApiService();
+  if(!/^\/api\/health(?:[?#]|$)/.test(path))await ensureApiService();
   const safeToRetry=method==='GET'||method==='HEAD';
   const maxAttempts=safeToRetry?3:1;
   for(let attempt=0;attempt<maxAttempts;attempt++){
@@ -81,7 +81,7 @@ async function api(path,opts={}){
         const detail=d.detail;
         throw new Error(typeof detail==='string'?detail:Array.isArray(detail)?detail.map(x=>x.msg).join('; '):'The request could not be completed.');
       }
-      if(/^\\/api\\/health(?:[?#]|$)/.test(path))apiServiceReadyUntil=Date.now()+10*60*1000;
+      if(/^\/api\/health(?:[?#]|$)/.test(path))apiServiceReadyUntil=Date.now()+10*60*1000;
       return d;
     }catch(error){
       if(error.name==='AbortError')throw new Error('The provider took too long. Please retry or narrow the date range.');
