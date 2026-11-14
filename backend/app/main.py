@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, HTTPException, UploadFile, File
-from fastapi.responses import FileResponse, Response, JSONResponse
+from fastapi.responses import FileResponse, Response, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
@@ -2246,6 +2246,15 @@ async def fragmentation_ep(raster: UploadFile = File(...), threshold: float = Qu
 @app.post("/api/carbon")
 def carbon_ep(req: CarbonRequest): return carbon_estimate(req)
 
+
+@app.get("/api/carbon")
+def carbon_get_ep(lat: float = 12.3375, lon: float = 75.8069, area_ha: float = 100.0, biomass_t_per_ha: float = 240.0):
+    req = CarbonRequest(area_ha=area_ha, biomass_t_per_ha=biomass_t_per_ha, uncertainty_pct=25.0)
+    res = carbon_estimate(req)
+    if isinstance(res, dict):
+        res["location"] = {"lat": lat, "lon": lon}
+    return res
+
 @app.post("/api/patrol")
 def patrol_ep(req: PatrolRequest):
     try: return patrol_optimize(req)
@@ -2407,6 +2416,137 @@ async def trends_report_csv(payload: dict):
     )
 
 
+# --- EARTHSCOPE NASA TREND DETECTIVE & PLATFORM INTEGRATION ---
+
+try:
+    import earthscope_backend as eb
+except ImportError:
+    try:
+        from app import earthscope_backend as eb
+    except ImportError:
+        import backend.earthscope_backend as eb
+
+@app.get("/api/credentials/manifest")
+def credentials_manifest():
+    return {"ok": True, "credentials": getattr(eb, "CREDENTIALS_MANIFEST", [])}
+
+@app.get("/api/satellite/services-matrix")
+def satellite_services_matrix():
+    return {"ok": True, "services": getattr(eb, "CONNECTED_SERVICES_MATRIX", [])}
+
+@app.get("/api/satellite/constellations")
+def satellite_constellations():
+    return {"ok": True, "constellations": getattr(eb, "SATELLITE_CONSTELLATIONS_CATALOG", {})}
+
+@app.get("/api/earth/datasets")
+def earth_datasets():
+    return {"ok": True, "datasets": getattr(eb, "NASA_DATASETS_REGISTRY", {})}
+
+@app.get("/api/earth/appeears/products")
+def appeears_products():
+    return {"ok": True, "products": getattr(eb, "APPEEARS_LPDAAC_PRODUCTS", {})}
+
+@app.post("/api/earth/appeears/task")
+def appeears_task(payload: dict):
+    task_name = payload.get("task_name", "earthscope_sample")
+    lat = float(payload.get("lat", 12.3375))
+    lon = float(payload.get("lon", 75.8069))
+    prod = payload.get("product_id", "MOD13Q1.061")
+    layer = payload.get("layer_name", "_250m_16_days_NDVI")
+    builder = getattr(eb, "build_appeears_task_payload", None)
+    task_payload = builder(task_name, lat, lon, prod, layer) if builder else {}
+    import hashlib
+    task_hash = hashlib.md5(f"{lat}:{lon}:{prod}:{layer}".encode()).hexdigest()[:8]
+    return {
+        "ok": True,
+        "task_id": f"appeears-sub-{task_hash}",
+        "task_name": task_name,
+        "status": "QUEUED",
+        "progress": "Subsetting 250m MODIS LP DAAC grid at coordinate point",
+        "appeears_api_url": "https://appeears.earthdatacloud.nasa.gov/api/",
+        "payload": task_payload,
+        "download_url": f"https://appeears.earthdatacloud.nasa.gov/api/bundle/appeears-sub-{task_hash}"
+    }
+
+@app.get("/api/earth/variables")
+def earth_variables():
+    return {"ok": True, "variables": getattr(eb, "NASA_VARIABLE_CATALOGUE", {})}
+
+@app.get("/api/earth/cmr/search")
+async def earth_cmr_search(keyword: str = Query("MODIS"), page_size: int = Query(8)):
+    query_fn = getattr(eb, "query_nasa_cmr", None)
+    if query_fn:
+        return await query_fn(keyword, page_size)
+    return {"ok": True, "keyword": keyword, "count": 0, "collections": []}
+
+@app.get("/api/earth/coverage")
+def earth_coverage(lat: float = Query(12.3375), lon: float = Query(75.8069)):
+    return {
+        "ok": True,
+        "location": {"lat": lat, "lon": lon},
+        "coverage": {
+            "MOD13Q1": {"status": "AVAILABLE", "temporal_range": "2000-02-18 to Present", "resolution": "250m"},
+            "MOD11A2": {"status": "AVAILABLE", "temporal_range": "2000-03-05 to Present", "resolution": "1km"},
+            "NASA_POWER": {"status": "AVAILABLE", "temporal_range": "1981-01-01 to Present", "resolution": "0.5°"},
+            "GPM_IMERG": {"status": "AVAILABLE", "temporal_range": "2000-06-01 to Present", "resolution": "0.1°"},
+            "MERRA2": {"status": "AVAILABLE", "temporal_range": "1980-01-01 to Present", "resolution": "0.5°x0.625°"},
+            "GLDAS": {"status": "AVAILABLE", "temporal_range": "2000-01-01 to Present", "resolution": "0.25°"}
+        }
+    }
+
+@app.post("/api/earth/trends/analyze")
+async def earth_trends_analyze(payload: dict):
+    investigate_fn = getattr(eb, "run_earthscope_investigation", None)
+    lat = float(payload.get("lat", 12.3375))
+    lon = float(payload.get("lon", 75.8069))
+    region_name = payload.get("region_name", "Kodagu Forest Region")
+    variables = payload.get("variables", ["ndvi", "t2m", "precipitation", "lst_day"])
+    start_year = int(payload.get("start_year", 2015))
+    end_year = int(payload.get("end_year", 2024))
+    alpha = float(payload.get("alpha", 0.05))
+    if investigate_fn:
+        return await investigate_fn(lat, lon, region_name, variables, start_year, end_year, alpha)
+    return {"ok": False, "error": "Investigation engine not loaded"}
+
+@app.post("/api/earth/trends/compare")
+async def earth_trends_compare(payload: dict):
+    investigate_fn = getattr(eb, "run_earthscope_investigation", None)
+    regions = payload.get("regions", [])
+    variables = payload.get("variables", ["ndvi", "t2m", "precipitation"])
+    start_year = int(payload.get("start_year", 2015))
+    end_year = int(payload.get("end_year", 2024))
+    results = []
+    if investigate_fn:
+        for r in regions:
+            r_name = r.get("name", "Unknown Region")
+            r_lat = float(r.get("lat", 12.3375))
+            r_lon = float(r.get("lon", 75.8069))
+            inv = await investigate_fn(r_lat, r_lon, r_name, variables, start_year, end_year)
+            results.append(inv)
+    return {"ok": True, "count": len(results), "comparisons": results}
+
+@app.get("/api/earth/report")
+async def earth_report(
+    lat: float = Query(12.3375),
+    lon: float = Query(75.8069),
+    region_name: str = Query("Kodagu Forest Region"),
+    start_year: int = Query(2015),
+    end_year: int = Query(2024),
+    format: str = Query("html")
+):
+    investigate_fn = getattr(eb, "run_earthscope_investigation", None)
+    if not investigate_fn:
+        raise HTTPException(500, "Investigation engine not available")
+    inv = await investigate_fn(lat, lon, region_name, ["ndvi", "t2m", "precipitation", "lst_day"], start_year, end_year)
+    if format.lower() == "json":
+        return inv
+    html_gen = getattr(eb, "generate_earthscope_report_html", None)
+    if html_gen:
+        html = html_gen(inv)
+        return Response(content=html, media_type="text/html")
+    return JSONResponse(inv)
+
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WEB = PROJECT_ROOT / "web"
@@ -2423,4 +2563,17 @@ def favicon():
 def root():
     p = WEB / "index.html"
     return FileResponse(str(p)) if p.exists() else {"message": "VanRakshak AI API", "docs": "/docs"}
+
+
+@app.get("/dashboard")
+@app.get("/dashboard/")
+@app.get("/earthscope")
+@app.get("/earthscope/")
+@app.get("/earthscope/{module:path}")
+def serve_earthscope(module: str = ""):
+    dashboard_file = WEB / "dashboard.html"
+    if dashboard_file.exists():
+        return FileResponse(str(dashboard_file))
+    return RedirectResponse(url="/")
+
 
