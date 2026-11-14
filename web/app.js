@@ -23,9 +23,41 @@ const baseStyle={
 function toast(msg,ms=3300){const t=$('toast');t.textContent=msg;t.classList.remove('hidden');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.add('hidden'),ms)}
 async function api(path,opts={}){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),120000);
-  try{const r=await fetch(API+path,{...opts,signal:opts.signal||controller.signal});const body=await r.text();let d;try{d=JSON.parse(body)}catch{throw new Error(r.ok?'The server returned invalid data.':'The service is unavailable. Please retry.')}
-  if(!r.ok){const detail=d.detail;throw new Error(typeof detail==='string'?detail:Array.isArray(detail)?detail.map(x=>x.msg).join('; '):'The request could not be completed.')}return d;
-  }catch(e){if(e.name==='AbortError')throw new Error('The provider took too long. Please retry or narrow the date range.');throw e}finally{clearTimeout(timer)}
+  const method=(opts.method||'GET').toUpperCase();
+  const retryable=method==='GET'||method==='HEAD';
+  const retryDelays=retryable?[0,1500,3000,6000,10000,15000]:[0];
+  let lastError=null;
+  try{
+    for(let attempt=0;attempt<retryDelays.length;attempt++){
+      if(retryDelays[attempt]){
+        await new Promise((resolve,reject)=>{
+          const onAbort=()=>{clearTimeout(waitTimer);reject(new DOMException('The request was aborted','AbortError'))};
+          const waitTimer=setTimeout(()=>{controller.signal.removeEventListener('abort',onAbort);resolve()},retryDelays[attempt]);
+          controller.signal.addEventListener('abort',onAbort,{once:true});
+        });
+      }
+      try{
+        const r=await fetch(API+path,{...opts,signal:opts.signal||controller.signal});
+        if(retryable&&[502,503,504].includes(r.status)&&attempt<retryDelays.length-1){
+          lastError=new Error(`Backend is waking up (HTTP ${r.status}). Retrying…`);
+          await r.body?.cancel();
+          continue;
+        }
+        const body=await r.text();let d;
+        try{d=JSON.parse(body)}catch{throw new Error(r.ok?'The server returned invalid data.':'The service is unavailable. Please retry.')}
+        if(!r.ok){const detail=d.detail;throw new Error(typeof detail==='string'?detail:Array.isArray(detail)?detail.map(x=>x.msg).join('; '):'The request could not be completed.')}
+        return d;
+      }catch(e){
+        if(e.name==='AbortError'||controller.signal.aborted)throw e;
+        lastError=e;
+        if(!retryable||attempt>=retryDelays.length-1)throw e;
+      }
+    }
+    throw lastError||new Error('The service is temporarily unavailable. Please retry.');
+  }catch(e){
+    if(e.name==='AbortError')throw new Error('The provider took too long. The service may still be starting; please retry.');
+    throw e;
+  }finally{clearTimeout(timer)}
 }
 function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function isoDate(d){return d.toISOString().slice(0,10)}
