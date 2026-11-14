@@ -16,3 +16,4 @@ node_modules/
 models/checkpoints/
 data/raw/
 data/cache/
+.vercel

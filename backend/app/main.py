@@ -2441,6 +2441,45 @@ async def trends_report_csv(payload: dict):
     )
 
 
+@app.get("/api/report/pdf")
+async def report_pdf_get(lat: float = 12.3375, lon: float = 75.8069, name: str = "Western Ghats"):
+    payload = await run_trend_analysis(
+        aoi_id="kodagu",
+        variable_id="modis_ndvi",
+        start_year=2018,
+        end_year=2024,
+        custom_lat=lat,
+        custom_lon=lon
+    )
+    payload["target_name"] = name
+    pdf_bytes = generate_trend_report_pdf(payload)
+    safe_name = name.lower().replace(" ", "-").replace("/", "-")[:30]
+    return Response(
+        pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=vanrakshak-dossier-{safe_name}.pdf"}
+    )
+
+
+@app.get("/api/report/csv")
+async def report_csv_get(lat: float = 12.3375, lon: float = 75.8069, name: str = "Western Ghats"):
+    payload = await run_trend_analysis(
+        aoi_id="kodagu",
+        variable_id="modis_ndvi",
+        start_year=2018,
+        end_year=2024,
+        custom_lat=lat,
+        custom_lon=lon
+    )
+    csv_str = generate_trend_data_csv(payload)
+    safe_name = name.lower().replace(" ", "-").replace("/", "-")[:30]
+    return Response(
+        csv_str,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=vanrakshak-timeseries-{safe_name}.csv"}
+    )
+
+
 # --- EARTHSCOPE NASA TREND DETECTIVE & PLATFORM INTEGRATION ---
 
 try:
@@ -2519,15 +2558,18 @@ def earth_coverage(lat: float = Query(12.3375), lon: float = Query(75.8069)):
         }
     }
 
+@app.get("/api/earth/trends/analyze")
 @app.post("/api/earth/trends/analyze")
-async def earth_trends_analyze(payload: dict):
+async def earth_trends_analyze(payload: dict = None, lat: float = 12.3375, lon: float = 75.8069, region_name: str = "Kodagu Forest Region", start_year: int = 2018, end_year: int = 2024):
     investigate_fn = getattr(eb, "run_earthscope_investigation", None)
-    lat = float(payload.get("lat", 12.3375))
-    lon = float(payload.get("lon", 75.8069))
-    region_name = payload.get("region_name", "Kodagu Forest Region")
+    if payload is None:
+        payload = {}
+    lat = float(payload.get("lat", lat))
+    lon = float(payload.get("lon", lon))
+    region_name = payload.get("region_name", region_name)
     variables = payload.get("variables", ["ndvi", "t2m", "precipitation", "lst_day"])
-    start_year = int(payload.get("start_year", 2015))
-    end_year = int(payload.get("end_year", 2024))
+    start_year = int(payload.get("start_year", start_year))
+    end_year = int(payload.get("end_year", end_year))
     alpha = float(payload.get("alpha", 0.05))
     if investigate_fn:
         return await investigate_fn(lat, lon, region_name, variables, start_year, end_year, alpha)
@@ -2609,7 +2651,10 @@ async def earth_investigate_ep(
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WEB = PROJECT_ROOT / "web"
 if not WEB.exists(): WEB = Path("/web")
-if WEB.exists(): app.mount("/static", StaticFiles(directory=str(WEB)), name="static")
+if WEB.exists():
+    app.mount("/static", StaticFiles(directory=str(WEB)), name="static")
+    if (WEB / "textures").exists():
+        app.mount("/textures", StaticFiles(directory=str(WEB / "textures")), name="textures")
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
