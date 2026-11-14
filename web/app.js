@@ -21,11 +21,80 @@ const baseStyle={
 };
 
 function toast(msg,ms=3300){const t=$('toast');t.textContent=msg;t.classList.remove('hidden');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.add('hidden'),ms)}
+let apiServiceReadyUntil=0;
+let apiServiceReadyPromise=null;
+const apiSleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+
+async function ensureApiService(){
+  if(Date.now()<apiServiceReadyUntil)return;
+  if(!apiServiceReadyPromise){
+    apiServiceReadyPromise=(async()=>{
+      const retryDelays=[0,2500,5000,8000,12000,15000];
+      let lastError=null;
+      for(const delayMs of retryDelays){
+        if(delayMs)await apiSleep(delayMs);
+        const controller=new AbortController();
+        const timer=setTimeout(()=>controller.abort(),8000);
+        try{
+          const response=await fetch('/api/health',{method:'GET',cache:'no-store',headers:{'Accept':'application/json'},signal:controller.signal});
+          if(response.ok){
+            apiServiceReadyUntil=Date.now()+10*60*1000;
+            return;
+          }
+          lastError=new Error('Health check returned HTTP '+response.status);
+        }catch(error){
+          lastError=error;
+        }finally{
+          clearTimeout(timer);
+        }
+      }
+      throw new Error('The forest data service is starting but is not ready yet. '+(lastError?.message||'')+' Please retry in a few seconds.');
+    })().finally(()=>{apiServiceReadyPromise=null});
+  }
+  return apiServiceReadyPromise;
+}
+
 async function api(path,opts={}){
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),120000);
-  try{const r=await fetch(API+path,{...opts,signal:opts.signal||controller.signal});const body=await r.text();let d;try{d=JSON.parse(body)}catch{throw new Error(r.ok?'The server returned invalid data.':'The service is unavailable. Please retry.')}
-  if(!r.ok){const detail=d.detail;throw new Error(typeof detail==='string'?detail:Array.isArray(detail)?detail.map(x=>x.msg).join('; '):'The request could not be completed.')}return d;
-  }catch(e){if(e.name==='AbortError')throw new Error('The provider took too long. Please retry or narrow the date range.');throw e}finally{clearTimeout(timer)}
+  const method=String(opts.method||'GET').toUpperCase();
+  if(!/^\\/api\\/health(?:[?#]|$)/.test(path))await ensureApiService();
+  const safeToRetry=method==='GET'||method==='HEAD';
+  const maxAttempts=safeToRetry?3:1;
+  for(let attempt=0;attempt<maxAttempts;attempt++){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),120000);
+    try{
+      const r=await fetch(API+path,{...opts,signal:opts.signal||controller.signal});
+      const body=await r.text();
+      let d;
+      try{d=JSON.parse(body)}catch{
+        if(!r.ok&&safeToRetry&&[502,503,504].includes(r.status)&&attempt<maxAttempts-1){
+          await apiSleep(1500*(attempt+1));
+          continue;
+        }
+        throw new Error(r.ok?'The server returned invalid data.':'The service is unavailable. Please retry.');
+      }
+      if(!r.ok){
+        const transient=[502,503,504].includes(r.status)&&d?.status!=='PROVIDER_UNAVAILABLE';
+        if(transient&&safeToRetry&&attempt<maxAttempts-1){
+          await apiSleep(1500*(attempt+1));
+          continue;
+        }
+        const detail=d.detail;
+        throw new Error(typeof detail==='string'?detail:Array.isArray(detail)?detail.map(x=>x.msg).join('; '):'The request could not be completed.');
+      }
+      if(/^\\/api\\/health(?:[?#]|$)/.test(path))apiServiceReadyUntil=Date.now()+10*60*1000;
+      return d;
+    }catch(error){
+      if(error.name==='AbortError')throw new Error('The provider took too long. Please retry or narrow the date range.');
+      if(safeToRetry&&error instanceof TypeError&&attempt<maxAttempts-1){
+        await apiSleep(1500*(attempt+1));
+        continue;
+      }
+      throw error;
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+  throw new Error('The service is temporarily unavailable. Please retry.');
 }
 function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function isoDate(d){return d.toISOString().slice(0,10)}
