@@ -28,19 +28,25 @@ class EarthEngineAdapter:
     api_repo_url = "https://github.com/google/earthengine-api"
 
     def _ee(self):
-        if not settings.google_cloud_project:
-            raise AdapterError(
-                "Earth Engine is not configured. Set GOOGLE_CLOUD_PROJECT and provide Application Default Credentials."
-            )
+        project = settings.google_cloud_project or "protean-sensor-495611-q7"
         try:
             import ee
         except Exception as e:
             raise AdapterError("earthengine-api package is unavailable") from e
         try:
-            # Earth Engine's Python API requires an eligible Cloud project for initialization.
-            ee.Initialize(project=settings.google_cloud_project)
+            import json, os
+            sa_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or os.path.expanduser("~/.config/vanrakshak/gcp-service-account.json")
+            if os.path.exists(sa_path):
+                with open(sa_path) as f:
+                    data = json.load(f)
+                email = data.get("client_email")
+                proj = data.get("project_id") or project
+                creds = ee.ServiceAccountCredentials(email, sa_path)
+                ee.Initialize(creds, project=proj)
+            else:
+                ee.Initialize(project=project)
         except Exception as e:
-            raise AdapterError("Earth Engine is not authenticated. Configure GOOGLE_APPLICATION_CREDENTIALS and GOOGLE_CLOUD_PROJECT.") from e
+            raise AdapterError(f"Earth Engine authentication failed: {e}") from e
         return ee
 
     def catalog(self):
