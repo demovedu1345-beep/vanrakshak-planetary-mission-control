@@ -1036,9 +1036,29 @@ def fire_history(limit: int = Query(200, ge=1, le=2000)):
         raise HTTPException(503, f"Fire history persistence unavailable: {exc}")
 
 
+@app.get("/api/firms/live")
+async def firms_live_ep(
+    lat: float = Query(12.3375),
+    lon: float = Query(75.8069),
+    days: int = Query(2, ge=1, le=10),
+    format: str = Query("json")
+):
+    try:
+        data = await firms.fires(lat, lon, days=days)
+        return {"ok": True, "fires": data or [], "source": firms.source_url}
+    except Exception as e:
+        return {"ok": False, "error": str(e), "fires": []}
+
+
 @app.get("/api/eonet/events")
-async def eonet_events(lat: float, lon: float, days: int = Query(30, ge=1, le=365), radius_deg: float = Query(3, ge=.2, le=20)):
-    return await wrap("NASA EONET", eonet.events(lat, lon, days=days, radius_deg=radius_deg), "DYNAMIC_RECENT", eonet.source_url)
+async def eonet_events(
+    lat: float = Query(12.3375),
+    lon: float = Query(75.8069),
+    days: int = Query(30, ge=1, le=365),
+    radius_deg: float = Query(3, ge=.2, le=20),
+    limit: int = Query(20, ge=1, le=100)
+):
+    return await wrap("NASA EONET", eonet.events(lat, lon, days=days, radius_deg=radius_deg, limit=limit), "DYNAMIC_RECENT", eonet.source_url)
 
 
 @app.get("/api/gibs/catalog")
