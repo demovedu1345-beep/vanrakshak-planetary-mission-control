@@ -235,32 +235,37 @@ async def news_source_result(place: str, timespan: str = "1week"):
     }
     errors=[]
     pending=set(tasks)
+    start_time = asyncio.get_event_loop().time()
     try:
-        async with asyncio.timeout(6.0):
-            while pending:
-                done,pending=await asyncio.wait(pending,return_when=asyncio.FIRST_COMPLETED)
-                for task in done:
-                    ok,label,url,data,error=await task
-                    if ok:
-                        for p in pending:
-                            p.cancel()
-                        if pending:
-                            await asyncio.gather(*pending,return_exceptions=True)
-                        notes=None
-                        if label!="GDELT DOC 2.0":
-                            notes="Fastest responsive real news provider selected; GDELT remains available when responsive."
-                        return SourceResult(
-                            ok=True,data=data,
-                            provenance=prov(label,"DYNAMIC_RECENT",url,notes=notes),
-                        )
-                    errors.append(f"{label}: {error}")
-    except TimeoutError:
-        errors.append("News providers exceeded 6 second response budget")
+        while pending and (asyncio.get_event_loop().time() - start_time) < 6.0:
+            remaining = 6.0 - (asyncio.get_event_loop().time() - start_time)
+            done, pending = await asyncio.wait(pending, timeout=max(0.1, remaining), return_when=asyncio.FIRST_COMPLETED)
+            if not done:
+                break
+            for task in done:
+                ok, label, url, data, error = await task
+                if ok:
+                    for p in pending:
+                        p.cancel()
+                    if pending:
+                        await asyncio.gather(*pending, return_exceptions=True)
+                    notes = None
+                    if label != "GDELT DOC 2.0":
+                        notes = "Fastest responsive real news provider selected; GDELT remains available when responsive."
+                    return SourceResult(
+                        ok=True, data=data,
+                        provenance=prov(label, "DYNAMIC_RECENT", url, notes=notes),
+                    )
+                errors.append(f"{label}: {error}")
+        if pending:
+            errors.append("News providers exceeded 6 second response budget")
+    except Exception as e:
+        errors.append(f"News collection error: {e}")
     finally:
         for task in pending:
             task.cancel()
         if pending:
-            await asyncio.gather(*pending,return_exceptions=True)
+            await asyncio.gather(*pending, return_exceptions=True)
 
     return SourceResult(
         ok=False,data=None,error="; ".join(errors),
@@ -2547,6 +2552,39 @@ async def earth_report(
     return JSONResponse(inv)
 
 
+@app.get("/api/climate/forecast")
+async def climate_forecast_ep(
+    lat: float = Query(12.3375),
+    lon: float = Query(75.8069),
+    place: str = Query("Kodagu Forest Region"),
+    start_year: int = Query(2015),
+    end_year: int = Query(2024),
+):
+    fn = getattr(eb, "compute_climate_forecast_dossier", None)
+    if fn:
+        return await fn(lat, lon, place, start_year, end_year)
+    raise HTTPException(500, "Climate forecast engine not loaded")
+
+@app.get("/api/climate/states")
+def climate_states_ep():
+    return {"ok": True, "states": getattr(eb, "ALL_INDIA_STATES_CATALOG", [])}
+
+@app.get("/api/earth/investigate")
+@app.post("/api/earth/investigate")
+async def earth_investigate_ep(
+    lat: float = Query(12.3375),
+    lon: float = Query(75.8069),
+    region_name: str = Query("Kodagu Forest Region"),
+    variable: str = Query("ndvi"),
+    start_year: int = Query(2015),
+    end_year: int = Query(2024),
+):
+    investigate_fn = getattr(eb, "run_earthscope_investigation", None)
+    if investigate_fn:
+        return await investigate_fn(lat, lon, region_name, [variable], start_year, end_year)
+    raise HTTPException(500, "Investigation engine not loaded")
+
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WEB = PROJECT_ROOT / "web"
@@ -2567,6 +2605,20 @@ def root():
 
 @app.get("/dashboard")
 @app.get("/dashboard/")
+@app.get("/dashboard")
+@app.get("/dashboard/")
+@app.get("/globe")
+@app.get("/satellites")
+@app.get("/layers")
+@app.get("/forest")
+@app.get("/hazards")
+@app.get("/environment")
+@app.get("/intelligence")
+@app.get("/operations")
+@app.get("/analytics")
+@app.get("/reports")
+@app.get("/system")
+@app.get("/mission-control")
 @app.get("/earthscope")
 @app.get("/earthscope/")
 @app.get("/earthscope/{module:path}")

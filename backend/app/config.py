@@ -1,6 +1,18 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import os
+from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+    _curr = Path(__file__).resolve()
+    for _p in [_curr.parent, _curr.parents[1], _curr.parents[2]]:
+        _ef = _p / ".env"
+        if _ef.exists():
+            load_dotenv(_ef)
+            break
+except Exception:
+    pass
 
 
 def _env(name: str, default: str = "") -> str:
