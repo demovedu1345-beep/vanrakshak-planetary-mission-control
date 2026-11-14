@@ -7,7 +7,7 @@
     },
     {
       "src": "/static/(.*)",
-      "dest": "https://vanrakshak-ai-scu6.onrender.com/static/$1"
+      "dest": "/$1"
     },
     {
       "src": "/docs",
