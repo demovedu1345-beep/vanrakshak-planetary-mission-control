@@ -1395,6 +1395,39 @@ if($('btnCompareRegions'))$('btnCompareRegions').onclick=runTrendLabRegionCompar
 if($('btnExportPDF'))$('btnExportPDF').onclick=exportTrendLabPDF;
 if($('btnExportCSV'))$('btnExportCSV').onclick=exportTrendLabCSV;
 if($('closeCompareSection'))$('closeCompareSection').onclick=()=>$('trendCompareSection')?.classList.add('hidden');
+if($('btnWesternGhatsPreset')) {
+  $('btnWesternGhatsPreset').onclick = () => {
+    if($('trendAoiSelect')) $('trendAoiSelect').value = 'kodagu';
+    if($('trendVarSelect')) $('trendVarSelect').value = 'modis_ndvi';
+    if($('trendStartYear')) $('trendStartYear').value = '2018';
+    if($('trendEndYear')) $('trendEndYear').value = '2024';
+    toast('Loaded Western Ghats Guided Case Study: MODIS NDVI 2018–2024');
+    runTrendLabAnalysis();
+  };
+}
+if($('btnDetectiveGuide')) {
+  const handleGuide = () => {
+    const q = ($('trendDetectiveInput')?.value || '').toLowerCase();
+    if(!q.trim()) return toast('Type an intent first (e.g. rain, drought, temperature)');
+    let recVar = 'modis_ndvi', reason = 'MODIS NDVI for general canopy health';
+    if (q.includes('rain') || q.includes('precip') || q.includes('monsoon')) {
+      recVar = 'gpm_precipitation'; reason = 'NASA GPM IMERG for precipitation accumulation';
+    } else if (q.includes('soil') || q.includes('drought') || q.includes('moist') || q.includes('water')) {
+      recVar = 'gldas_soil_moisture'; reason = 'NASA GLDAS for root-zone soil moisture';
+    } else if (q.includes('temp') || q.includes('heat') || q.includes('warm')) {
+      recVar = 'merra2_temperature'; reason = 'NASA MERRA-2 for 2m air temperature';
+    } else if (q.includes('humid') || q.includes('vapor') || q.includes('rh')) {
+      recVar = 'merra2_humidity'; reason = 'NASA MERRA-2 for relative humidity';
+    } else if (q.includes('evi') || q.includes('vigor') || q.includes('dense')) {
+      recVar = 'modis_evi'; reason = 'MODIS Enhanced Vegetation Index (EVI)';
+    }
+    if($('trendVarSelect')) $('trendVarSelect').value = recVar;
+    toast(`Guided Recommender: Selected ${reason}`);
+    runTrendLabAnalysis();
+  };
+  $('btnDetectiveGuide').onclick = handleGuide;
+  $('trendDetectiveInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') handleGuide(); });
+}
 $('closeAlert').onclick=()=>$('alertModal').classList.add('hidden');$('refreshAlert').onclick=composeCurrentAlert;$('attachAlertPatrol').onclick=attachAlertPatrolRoute;$('copyAlert').onclick=copyAlertMessage;$('shareAlert').onclick=shareAlertMessage;$('whatsappAlert').onclick=whatsappAlertMessage;$('emailAlert').onclick=emailAlertMessage;
 $('openTime').onclick=()=>{$('timeModal').classList.remove('hidden');state.timeMap?.resize()};
 $('closeTime').onclick=()=>{if(state.timeTimer){clearInterval(state.timeTimer);state.timeTimer=null}$('playTime').textContent='▶ Play';$('timeModal').classList.add('hidden')};$('loadTime').onclick=loadTime;$('playTime').onclick=toggleTimePlay;
