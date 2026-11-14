@@ -2670,8 +2670,9 @@ def root():
 
 @app.get("/dashboard")
 @app.get("/dashboard/")
-@app.get("/dashboard")
-@app.get("/dashboard/")
+@app.get("/forecast")
+@app.get("/maps")
+@app.get("/canopy")
 @app.get("/globe")
 @app.get("/satellites")
 @app.get("/layers")
