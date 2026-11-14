@@ -29,6 +29,7 @@
         <button id="analyticsTop">Analytics</button>
         <button id="reportsTop">Reports</button>
         <button id="aboutTop">About</button>
+        <button id="trendLabTop" class="hud-pill" style="border-color: rgba(56,189,248,0.5); color: #38bdf8; font-weight:600;">🛰 NASA Trend Lab</button>
         <button id="healthBtn" class="avatar-btn" title="System / source health">●</button>
       </nav>
     </header>
@@ -44,6 +45,7 @@
       <button class="nav" data-nav="predictions"><span class="nav-icon">⌁</span><span>Predictions</span></button>
       <button class="nav" data-nav="patrol"><span class="nav-icon">⌁</span><span>Patrol Planner</span></button>
       <button class="nav" data-nav="reports"><span class="nav-icon">▤</span><span>Reports</span></button>
+      <button class="nav" data-nav="trendlab" id="navTrendLab"><span class="nav-icon">🛰</span><span>NASA Trend Lab</span></button>
 
       <button id="aiAssistantBtn" class="assistant-card">
         <span class="assistant-icon">🤖</span>
@@ -427,6 +429,221 @@
           <div><b>Usability</b><span>Search any area, before/after, environment, predictions, alerts, patrol route, real field media and source-backed PDF reporting.</span></div>
         </div>
       </article>
+    </div>
+  </div>
+
+
+  <!-- NASA TREND LAB / EARTH SYSTEM TREND DETECTIVE MODAL -->
+  <div id="trendLabModal" class="modal hidden">
+    <div class="modal-card trendlab-modal-card">
+      <div class="drawer-head">
+        <div>
+          <small style="color: #38bdf8; font-weight: 700; letter-spacing: 1px;">NASA SPACE APPS 2026 — CHALLENGE 02</small>
+          <h2>NASA Trend Lab — Earth System Trend Detective</h2>
+        </div>
+        <button id="closeTrendLab" class="icon-btn" aria-label="Close NASA Trend Lab">✕</button>
+      </div>
+
+      <!-- Controls Strip -->
+      <div class="trendlab-controls-bar">
+        <div class="trendlab-control-group">
+          <label for="trendAoiSelect">Area of Interest (AOI)</label>
+          <select id="trendAoiSelect" class="trendlab-select">
+            <option value="kodagu" selected>🌲 Kodagu Forest Region (Western Ghats)</option>
+            <option value="bandipur">🐅 Bandipur Tiger Reserve & National Park</option>
+            <option value="wayanad">🌿 Wayanad Wildlife Sanctuary</option>
+            <option value="custom">📍 Current Map Location / Custom</option>
+          </select>
+        </div>
+
+        <div class="trendlab-control-group">
+          <label for="trendVarSelect">NASA Environmental Variable</label>
+          <select id="trendVarSelect" class="trendlab-select">
+            <option value="modis_ndvi" selected>🍃 MODIS MOD13A3 — Vegetation Index (NDVI)</option>
+            <option value="modis_evi">🌱 MODIS MOD13A3 — Enhanced Veg Index (EVI)</option>
+            <option value="gpm_precipitation">🌧 NASA GPM IMERG — Precipitation (mm/mo)</option>
+            <option value="gldas_soil_moisture">💧 NASA GLDAS — Root Zone Soil Moisture (0-1)</option>
+            <option value="merra2_temperature">🌡 MERRA-2 — 2m Air Temperature (°C)</option>
+            <option value="merra2_humidity">☁ MERRA-2 — Relative Humidity (%)</option>
+          </select>
+        </div>
+
+        <div class="trendlab-control-group date-group">
+          <label>Observation Window</label>
+          <div class="year-range-inputs">
+            <select id="trendStartYear" class="trendlab-select mini-select">
+              <option value="2015">2015</option>
+              <option value="2016">2016</option>
+              <option value="2017">2017</option>
+              <option value="2018" selected>2018</option>
+              <option value="2019">2019</option>
+              <option value="2020">2020</option>
+            </select>
+            <span>→</span>
+            <select id="trendEndYear" class="trendlab-select mini-select">
+              <option value="2020">2020</option>
+              <option value="2021">2021</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024" selected>2024</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="trendlab-actions">
+          <button id="btnRunTrend" class="trendlab-btn primary-btn">🔍 Run Trend Detection</button>
+          <button id="btnCompareVars" class="trendlab-btn secondary-btn" title="Compare two variables side by side">⚖ Compare Variables</button>
+          <button id="btnCompareRegions" class="trendlab-btn secondary-btn" title="Compare two regions side by side">🌍 Compare Regions</button>
+          <button id="btnExportPDF" class="trendlab-btn export-btn" title="Download official evidence report">📄 Export PDF</button>
+          <button id="btnExportCSV" class="trendlab-btn export-btn" title="Download observations CSV">📊 Export CSV</button>
+        </div>
+      </div>
+
+      <!-- Provenance Metadata Strip -->
+      <div id="trendProvenanceBanner" class="trendlab-provenance-banner">
+        <div class="prov-pill"><small>DATASET</small><b id="provDataset">MODIS MOD13A3.061</b></div>
+        <div class="prov-pill"><small>DAAC</small><b id="provDaac">NASA LP DAAC</b></div>
+        <div class="prov-pill"><small>DOI</small><b id="provDoi">10.5067/MODIS/MOD13A3.061</b></div>
+        <div class="prov-pill"><small>RESOLUTION</small><b id="provRes">1 km • Monthly</b></div>
+        <div class="prov-pill"><small>TYPE</small><span id="provType" class="badge-tag">DIRECT_OBSERVATION</span></div>
+        <div class="prov-pill"><small>STATUS</small><span id="provFreshness" class="badge-tag live-tag">VERIFIED NASA DATA</span></div>
+      </div>
+
+      <!-- Scientific Statistical Metrics Summary Grid -->
+      <div class="trendlab-stats-grid">
+        <div class="trend-stat-card">
+          <small>SEN'S SLOPE (ANNUAL RATE)</small>
+          <div class="stat-main-row">
+            <strong id="statSensSlope">—</strong>
+            <span id="statSlopeUnit" class="stat-unit">units / yr</span>
+          </div>
+          <div class="stat-ci-row">95% CI: <span id="statSensCI">[—, —]</span></div>
+        </div>
+
+        <div class="trend-stat-card">
+          <small>MANN-KENDALL TEST STATISTIC</small>
+          <div class="stat-main-row">
+            <strong id="statMKS">—</strong>
+            <span class="stat-unit">S-stat</span>
+          </div>
+          <div class="stat-ci-row">Std Z: <span id="statMKZ">—</span> • Var(S): <span id="statMKVar">—</span></div>
+        </div>
+
+        <div class="trend-stat-card highlight-card">
+          <small>TREND SIGNIFICANCE (α=0.05)</small>
+          <div class="stat-main-row">
+            <strong id="statTrendStatus">ANALYZING…</strong>
+          </div>
+          <div class="stat-ci-row">p-value: <b id="statMKP">—</b> (two-tailed)</div>
+        </div>
+
+        <div class="trend-stat-card">
+          <small>KENDALL'S RANK CORRELATION</small>
+          <div class="stat-main-row">
+            <strong id="statTau">—</strong>
+            <span class="stat-unit">τ</span>
+          </div>
+          <div class="stat-ci-row">Seasonal S: <span id="statSeasonalS">—</span></div>
+        </div>
+
+        <div class="trend-stat-card">
+          <small>DATA COVERAGE & INTEGRITY</small>
+          <div class="stat-main-row">
+            <strong id="statCoverage">—</strong>
+            <span class="stat-unit">% valid</span>
+          </div>
+          <div class="stat-ci-row">Valid Months: <span id="statValidN">—</span> (0 missing)</div>
+        </div>
+
+        <div class="trend-stat-card">
+          <small>HISTORICAL BASELINE MEAN</small>
+          <div class="stat-main-row">
+            <strong id="statMean">—</strong>
+            <span id="statMeanUnit" class="stat-unit">mean</span>
+          </div>
+          <div class="stat-ci-row">Min: <span id="statMin">—</span> • Max: <span id="statMax">—</span></div>
+        </div>
+      </div>
+
+      <!-- Interactive Chart View -->
+      <div class="trendlab-chart-wrapper">
+        <div class="trendlab-chart-head">
+          <div>
+            <strong id="chartTitle">Monthly Time-Series & Non-Parametric Sen's Slope</strong>
+            <small id="chartSubtitle">Observational values with monotonic trend trajectory</small>
+          </div>
+          <div class="trendlab-legend-pills">
+            <span class="pill-dot obs-dot"></span><span>Observed Value</span>
+            <span class="pill-dot trend-dot"></span><span>Sen's Slope Trend</span>
+            <span class="pill-dot clim-dot"></span><span>Climatology Baseline</span>
+          </div>
+        </div>
+        <div class="trendlab-canvas-container">
+          <canvas id="trendLabCanvas" width="900" height="260"></canvas>
+          <div id="trendLabTooltip" class="trendlab-tooltip hidden"></div>
+        </div>
+      </div>
+
+      <!-- Dual Comparison Section (hidden by default) -->
+      <div id="trendCompareSection" class="trendlab-compare-panel hidden">
+        <div class="drawer-head">
+          <div>
+            <small style="color: #38bdf8;">MULTI-VARIABLE CORRELATION</small>
+            <h3 id="compareSectionTitle">Environmental Association Matrix</h3>
+          </div>
+          <button id="closeCompareSection" class="icon-btn">✕</button>
+        </div>
+        <div class="compare-metrics-row">
+          <div class="compare-stat-chip"><b>Pearson r:</b> <span id="compPearson">—</span></div>
+          <div class="compare-stat-chip"><b>Spearman ρ:</b> <span id="compSpearman">—</span></div>
+          <div class="compare-stat-chip"><b>p-value:</b> <span id="compPVal">—</span></div>
+          <div class="compare-stat-chip"><b>Significance:</b> <span id="compSig">—</span></div>
+        </div>
+        <p id="compInterpretation" class="compare-note"></p>
+      </div>
+
+      <!-- 7-Question Grounded Scientific Explanation -->
+      <article class="detail-card trendlab-explanation-card">
+        <div class="analysis-section-head">
+          <div>
+            <h3 style="color:#38bdf8;">Evidence-Backed Environmental Interpretation</h3>
+            <p>Directly grounded in computed statistical results and authentic NASA Earth science observations.</p>
+          </div>
+          <span class="data-freshness">NASA TREND DETECTIVE</span>
+        </div>
+
+        <div class="trendlab-qa-list">
+          <div class="qa-item">
+            <div class="qa-q"><span class="qa-num">1</span> What environmental variable is changing?</div>
+            <div id="qaWhat" class="qa-a">Running analysis…</div>
+          </div>
+          <div class="qa-item">
+            <div class="qa-q"><span class="qa-num">2</span> Where is the change happening?</div>
+            <div id="qaWhere" class="qa-a">Running analysis…</div>
+          </div>
+          <div class="qa-item">
+            <div class="qa-q"><span class="qa-num">3</span> How much has it changed?</div>
+            <div id="qaHowMuch" class="qa-a">Running analysis…</div>
+          </div>
+          <div class="qa-item">
+            <div class="qa-q"><span class="qa-num">4</span> Is the observed trend statistically significant?</div>
+            <div id="qaSig" class="qa-a">Running analysis…</div>
+          </div>
+          <div class="qa-item">
+            <div class="qa-q"><span class="qa-num">5</span> What other environmental variables are changing alongside it?</div>
+            <div id="qaRelated" class="qa-a">Running analysis…</div>
+          </div>
+          <div class="qa-item">
+            <div class="qa-q"><span class="qa-num">6</span> What can the evidence tell us about forest ecosystem conditions?</div>
+            <div id="qaEco" class="qa-a">Running analysis…</div>
+          </div>
+          <div class="qa-item caution-qa">
+            <div class="qa-q"><span class="qa-num">7</span> What are the limitations and uncertainties of the available observations?</div>
+            <div id="qaLimitations" class="qa-a">Running analysis…</div>
+          </div>
+        </div>
+      </article>
+
     </div>
   </div>
 

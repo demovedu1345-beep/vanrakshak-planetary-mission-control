@@ -2,12 +2,30 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import cos, radians
 import numpy as np
-import rasterio
-from rasterio.windows import Window
-from rasterio.warp import transform_bounds, reproject, Resampling, transform_geom
-from rasterio.features import shapes
+try:
+    import rasterio
+    from rasterio.windows import Window
+    from rasterio.warp import transform_bounds, reproject, Resampling, transform_geom
+    from rasterio.features import shapes
+except ImportError:
+    rasterio = None
+    Window = None
+    transform_bounds = None
+    reproject = None
+    class _DummyResampling:
+        bilinear = 1
+        nearest = 0
+    Resampling = _DummyResampling
+    transform_geom = None
+    shapes = None
+
 from shapely.geometry import shape as shapely_shape
-from scipy.ndimage import label as cc_label, binary_erosion
+
+try:
+    from scipy.ndimage import label as cc_label, binary_erosion
+except ImportError:
+    cc_label = None
+    binary_erosion = None
 from app.adapters.base import AdapterError
 
 CLOUD_SCL = {3, 8, 9, 10, 11}  # cloud shadow, medium/high cloud, cirrus, snow/ice

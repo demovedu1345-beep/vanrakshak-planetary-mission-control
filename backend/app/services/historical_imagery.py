@@ -89,6 +89,14 @@ async def dated_scene(earth,pc,lat,lon,target_date,mode="true_color",window_days
     errors=[]
 
     if target_date >= SENTINEL_START:
+        if pc is not None:
+            try:
+                spec=await _planetary_scene(pc,lat,lon,target_date,mode,window_days,cloud_lt,"sentinel-2-l2a")
+                if spec and spec.get("tile_url"):
+                    return spec
+            except Exception as exc:
+                errors.append(f"Planetary Computer Sentinel-2: {exc}")
+
         try:
             item=await earth.closest_scene(lat,lon,target_date,window_days,cloud_lt) if earth is not None else None
             if item:
@@ -102,13 +110,6 @@ async def dated_scene(earth,pc,lat,lon,target_date,mode="true_color",window_days
                 return spec
         except Exception as exc:
             errors.append(f"Earth Search Sentinel-2: {exc}")
-        try:
-            spec=await _planetary_scene(pc,lat,lon,target_date,mode,window_days,cloud_lt,"sentinel-2-l2a")
-            if spec:
-                if errors: spec["provider_trace"]=errors
-                return spec
-        except Exception as exc:
-            errors.append(f"Planetary Computer Sentinel-2: {exc}")
 
     try:
         spec=await _public_landsat_scene(usgs,gcp,lat,lon,target_date,mode,window_days,cloud_lt)

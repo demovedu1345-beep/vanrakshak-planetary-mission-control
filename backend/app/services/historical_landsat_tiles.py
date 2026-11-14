@@ -4,10 +4,19 @@ from collections import OrderedDict
 from threading import Lock
 import re
 import numpy as np
-import rasterio
-from rasterio.transform import from_bounds
-from rasterio.vrt import WarpedVRT
-from rasterio.enums import Resampling
+try:
+    import rasterio
+    from rasterio.transform import from_bounds
+    from rasterio.vrt import WarpedVRT
+    from rasterio.enums import Resampling
+except ImportError:
+    rasterio = None
+    from_bounds = None
+    WarpedVRT = None
+    class _DummyResampling:
+        bilinear = 1
+        nearest = 0
+    Resampling = _DummyResampling
 from PIL import Image
 
 

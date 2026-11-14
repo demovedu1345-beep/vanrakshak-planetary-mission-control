@@ -749,7 +749,7 @@ function renderActionPlan(plan,evidence){
 }
 
 function validateCompareDates(before,after){if(!before||!after||before>=after)throw new Error('Choose a before date earlier than the after date.');if(before<'1982-08-22')throw new Error('Supported satellite imagery begins on 1982-08-22.');if(after>isoDate(new Date()))throw new Error('Future dates have no satellite observations.');}
-function newMiniMap(container,center,zoom=11){return createEarthMap({container,center,zoom,style:{version:8,sources:{labels:baseStyle.sources.labels},layers:[baseStyle.layers[1]]},interactive:true,attributionControl:false})}
+function newMiniMap(container,center,zoom=11){return createEarthMap({container,center,zoom,style:{version:8,sources:{imagery:baseStyle.sources.imagery,labels:baseStyle.sources.labels},layers:[baseStyle.layers[0],baseStyle.layers[1]]},interactive:true,attributionControl:false})}
 function addSceneRaster(m,id,sceneOrUrl){const scene=typeof sceneOrUrl==='string'?{tile_url:sceneOrUrl}:sceneOrUrl||{},url=scene.tile_url;if(!url)return;const draw=()=>{if(m.getLayer(id))m.removeLayer(id);if(m.getSource(id))m.removeSource(id);const src={type:'raster',tiles:[url],tileSize:256};if(Number.isFinite(Number(scene.maxzoom)))src.maxzoom=Number(scene.maxzoom);if(Number.isFinite(Number(scene.minzoom)))src.minzoom=Number(scene.minzoom);if(scene.attribution)src.attribution=scene.attribution;m.addSource(id,src);m.addLayer({id,type:'raster',source:id,paint:{'raster-opacity':1}},m.getLayer('labels')?'labels':undefined)};if(m.isStyleLoaded())draw();else m.once('load',draw)}
 function syncMaps(a,b){let lock=false;a.on('move',()=>{if(lock)return;lock=true;const c=a.getCenter();b.jumpTo({center:[c.lng,c.lat],zoom:a.getZoom(),bearing:a.getBearing(),pitch:a.getPitch()});lock=false});b.on('move',()=>{if(lock)return;lock=true;const c=b.getCenter();a.jumpTo({center:[c.lng,c.lat],zoom:b.getZoom(),bearing:b.getBearing(),pitch:b.getPitch()});lock=false})}
 function destroyMap(key){if(state[key]){try{state[key].remove()}catch{}state[key]=null}}
@@ -1378,13 +1378,29 @@ $('closePatrol').onclick=closePatrol;$('runPatrol').onclick=()=>runPatrol(false)
 $('showPatrolMainMap').onclick=()=>{closePatrol();showTab('overview');if(state.patrolRouteGeometry)fitLineGeometry(state.patrolRouteGeometry,map);else fitSelected();toast('Patrol route shown on main map')};
 $('patrolEvidenceFiles').onchange=e=>renderPatrolEvidenceFiles(e.target.files);
 $('patrolModal').addEventListener('click',e=>{if(e.target===$('patrolModal'))closePatrol()});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('patrolModal').classList.contains('hidden'))closePatrol()});
+$('trendLabModal').addEventListener('click',e=>{if(e.target===$('trendLabModal'))closeNasaTrendLab()});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(!$('patrolModal').classList.contains('hidden'))closePatrol();
+    if(!$('trendLabModal').classList.contains('hidden'))closeNasaTrendLab();
+  }
+});
+
+// NASA Trend Lab interactions
+if($('trendLabTop'))$('trendLabTop').onclick=openNasaTrendLab;
+if($('closeTrendLab'))$('closeTrendLab').onclick=closeNasaTrendLab;
+if($('btnRunTrend'))$('btnRunTrend').onclick=runTrendLabAnalysis;
+if($('btnCompareVars'))$('btnCompareVars').onclick=runTrendLabVarCompare;
+if($('btnCompareRegions'))$('btnCompareRegions').onclick=runTrendLabRegionCompare;
+if($('btnExportPDF'))$('btnExportPDF').onclick=exportTrendLabPDF;
+if($('btnExportCSV'))$('btnExportCSV').onclick=exportTrendLabCSV;
+if($('closeCompareSection'))$('closeCompareSection').onclick=()=>$('trendCompareSection')?.classList.add('hidden');
 $('closeAlert').onclick=()=>$('alertModal').classList.add('hidden');$('refreshAlert').onclick=composeCurrentAlert;$('attachAlertPatrol').onclick=attachAlertPatrolRoute;$('copyAlert').onclick=copyAlertMessage;$('shareAlert').onclick=shareAlertMessage;$('whatsappAlert').onclick=whatsappAlertMessage;$('emailAlert').onclick=emailAlertMessage;
 $('openTime').onclick=()=>{$('timeModal').classList.remove('hidden');state.timeMap?.resize()};
 $('closeTime').onclick=()=>{if(state.timeTimer){clearInterval(state.timeTimer);state.timeTimer=null}$('playTime').textContent='▶ Play';$('timeModal').classList.add('hidden')};$('loadTime').onclick=loadTime;$('playTime').onclick=toggleTimePlay;
 $('addBhuvan').onclick=()=>{const layer=$('bhuvanLayer').value.trim();if(!layer)return toast('Enter an exact Bhuvan-published WMS layer name');addRaster('bhuvan-custom',`/api/bhuvan/tile/{z}/{x}/{y}.png?layer=${encodeURIComponent(layer)}`,.78);toast('Bhuvan layer added')};
 
-$$('[data-nav]').forEach(b=>b.onclick=async()=>{const n=b.dataset.nav;$$('[data-nav]').forEach(x=>x.classList.toggle('active',x===b));if(n==='map'){showTab('overview');fitSelected()}if(n==='forest')await quickLayer('forest');if(n==='alerts')await openAlertCenter();if(n==='analysis'){showTab('analysis');await loadEvidence(false)}if(n==='weather'){showTab('environment');renderEnvironment(state.investigation,state.profile)}if(n==='fire'){await quickLayer('fire')}if(n==='soil'){showTab('environment');renderEnvironment(state.investigation,state.profile);openLayerDrawer()}if(n==='predictions')$('intelligenceModal').classList.remove('hidden');if(n==='patrol')openPatrol();if(n==='reports')generateReport()});
+$$('[data-nav]').forEach(b=>b.onclick=async()=>{const n=b.dataset.nav;$$('[data-nav]').forEach(x=>x.classList.toggle('active',x===b));if(n==='map'){showTab('overview');fitSelected()}if(n==='forest')await quickLayer('forest');if(n==='alerts')await openAlertCenter();if(n==='analysis'){showTab('analysis');await loadEvidence(false)}if(n==='weather'){showTab('environment');renderEnvironment(state.investigation,state.profile)}if(n==='fire'){await quickLayer('fire')}if(n==='soil'){showTab('environment');renderEnvironment(state.investigation,state.profile);openLayerDrawer()}if(n==='predictions')$('intelligenceModal').classList.remove('hidden');if(n==='patrol')openPatrol();if(n==='reports')generateReport();if(n==='trendlab')openNasaTrendLab()});
 
 // Keep paired date controls synchronized.
 $('beforeDate').onchange=()=>{$('modalBeforeDate').value=$('beforeDate').value};$('afterDate').onchange=()=>{$('modalAfterDate').value=$('afterDate').value};$('modalBeforeDate').onchange=()=>{$('beforeDate').value=$('modalBeforeDate').value};$('modalAfterDate').onchange=()=>{$('afterDate').value=$('modalAfterDate').value};
@@ -1393,7 +1409,533 @@ let resizeFrame=0;window.addEventListener('resize',()=>{if(resizeFrame)cancelAni
 
 // Initial boot: exact dashboard layout opens on Kodagu with real source calls.
 (async function boot(){
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.scrollTo(0, 0);
   const start=()=>{map.flyTo({center:[state.lon,state.lat],zoom:8.2,duration:1400});investigate(state.lat,state.lon,state.place)};
   if(map.isStyleLoaded())start();else map.once('load',start);
   await Promise.allSettled([loadLayers(),loadSourceHealth(false)]);
 })();
+
+
+/* ==========================================================================
+   NASA TREND LAB — EARTH SYSTEM TREND DETECTIVE (CHALLENGE 02)
+   ========================================================================== */
+state.trendLabData = null;
+let trendCanvasHoverIdx = -1;
+
+function openNasaTrendLab() {
+  const modal = $('trendLabModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  if (!state.trendLabData) {
+    runTrendLabAnalysis();
+  } else {
+    renderTrendLabCanvas(state.trendLabData);
+  }
+}
+
+function closeNasaTrendLab() {
+  const modal = $('trendLabModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function runTrendLabAnalysis() {
+  const aoi = $('trendAoiSelect')?.value || 'kodagu';
+  const variable = $('trendVarSelect')?.value || 'modis_ndvi';
+  const start_year = parseInt($('trendStartYear')?.value || '2018', 10);
+  const end_year = parseInt($('trendEndYear')?.value || '2024', 10);
+
+  if (start_year >= end_year) {
+    toast('Start year must precede end year');
+    return;
+  }
+
+  const runBtn = $('btnRunTrend');
+  if (runBtn) {
+    runBtn.disabled = true;
+    runBtn.innerHTML = '⏳ Computing Trends…';
+  }
+  setText('statTrendStatus', 'ANALYZING…');
+
+  const payload = {
+    aoi: aoi,
+    variable: variable,
+    start_year: start_year,
+    end_year: end_year
+  };
+  if (aoi === 'custom') {
+    payload.custom_coords = [state.lat, state.lon];
+  }
+
+  try {
+    const data = await api('/api/trends/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    state.trendLabData = data;
+    renderTrendLabResults(data);
+    toast('NASA trend detection complete');
+  } catch (err) {
+    console.error('Trend Lab error:', err);
+    toast(err.message || 'NASA trend analysis failed');
+    setText('statTrendStatus', 'ERROR');
+  } finally {
+    if (runBtn) {
+      runBtn.disabled = false;
+      runBtn.innerHTML = '🔍 Run Trend Detection';
+    }
+  }
+}
+
+function renderTrendLabResults(data) {
+  if (!data || !data.statistics) return;
+
+  // 1. Provenance Metadata Banner
+  const prov = data.provenance || {};
+  setText('provDataset', prov.product_id || prov.dataset || 'MODIS MOD13A3');
+  setText('provDaac', prov.daac || 'NASA DAAC');
+  setText('provDoi', prov.doi || '10.5067/MODIS/MOD13A3.061');
+  setText('provRes', `${prov.spatial_resolution || '1 km'} • ${prov.temporal_resolution || 'Monthly'}`);
+  const provTypeEl = $('provType');
+  if (provTypeEl) provTypeEl.textContent = prov.data_type || 'DIRECT_OBSERVATION';
+
+  // 2. Statistical Metric Cards
+  const stats = data.statistics;
+  const sens = stats.sens_slope || {};
+  const mk = stats.mann_kendall || {};
+  const smk = stats.seasonal_mann_kendall || {};
+  const timeRange = data.time_range || {};
+
+  const annualRate = sens.annual_rate != null ? sens.annual_rate : 0;
+  setText('statSensSlope', (annualRate > 0 ? '+' : '') + annualRate.toFixed(4));
+  setText('statSlopeUnit', sens.unit_rate === 'units_per_year' ? `${prov.units || 'units'} / yr` : 'units / yr');
+  setText('statSensCI', `[${(sens.ci_lower_annual != null ? (sens.ci_lower_annual > 0 ? '+' : '') + sens.ci_lower_annual.toFixed(4) : '—')}, ${(sens.ci_upper_annual != null ? (sens.ci_upper_annual > 0 ? '+' : '') + sens.ci_upper_annual.toFixed(4) : '—')}]`);
+
+  setText('statMKS', mk.stat_s != null ? (mk.stat_s > 0 ? '+' : '') + mk.stat_s : '—');
+  setText('statMKZ', mk.z != null ? (mk.z > 0 ? '+' : '') + mk.z.toFixed(2) : '—');
+  setText('statMKVar', mk.var_s != null ? mk.var_s.toFixed(1) : '—');
+
+  const statusEl = $('statTrendStatus');
+  if (statusEl) {
+    if (mk.is_significant) {
+      if (mk.stat_s > 0) {
+        statusEl.textContent = 'SIGNIFICANT INCREASE';
+        statusEl.style.color = '#10b981';
+      } else {
+        statusEl.textContent = 'SIGNIFICANT DECREASE';
+        statusEl.style.color = '#ef4444';
+      }
+    } else {
+      statusEl.textContent = 'NO MONOTONIC TREND';
+      statusEl.style.color = '#94a3b8';
+    }
+  }
+  setText('statMKP', mk.p_value != null ? mk.p_value.toFixed(4) : '—');
+  setText('statTau', mk.tau != null ? (mk.tau > 0 ? '+' : '') + mk.tau.toFixed(3) : '—');
+  setText('statSeasonalS', smk.seasonal_s != null ? `${smk.seasonal_s > 0 ? '+' : ''}${smk.seasonal_s} (p=${smk.seasonal_p_value != null ? smk.seasonal_p_value.toFixed(3) : '—'})` : '—');
+
+  setText('statCoverage', timeRange.coverage_pct != null ? `${timeRange.coverage_pct.toFixed(1)}%` : '—');
+  setText('statValidN', `${timeRange.valid_months || 0} / ${timeRange.total_months || 0}`);
+
+  setText('statMean', stats.mean != null ? stats.mean.toFixed(3) : '—');
+  setText('statMeanUnit', prov.units || 'mean');
+  setText('statMin', stats.min != null ? stats.min.toFixed(2) : '—');
+  setText('statMax', stats.max != null ? stats.max.toFixed(2) : '—');
+
+  // 3. 7-Question Grounded Scientific Explanation
+  const exp = data.explanation || {};
+  setText('qaWhat', exp.what_changed || '—');
+  setText('qaWhere', exp.where_changed || '—');
+  setText('qaHowMuch', exp.how_much_changed || '—');
+  setText('qaSig', exp.is_statistically_significant || '—');
+  setText('qaRelated', exp.related_variables || '—');
+  setText('qaEco', exp.ecological_interpretation || '—');
+  setText('qaLimitations', exp.scientific_limitations || '—');
+
+  // 4. Time-Series Chart
+  renderTrendLabCanvas(data);
+}
+
+function renderTrendLabCanvas(data) {
+  const canvas = $('trendLabCanvas');
+  if (!canvas || !data || !data.time_series || !data.time_series.length) return;
+
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const containerW = canvas.parentElement ? canvas.parentElement.clientWidth : 900;
+  const width = Math.max(600, containerW);
+  const height = 260;
+
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+
+  ctx.save();
+  ctx.scale(dpr, dpr);
+
+  const series = data.time_series;
+  const anomalies = data.anomalies || [];
+  const stats = data.statistics || {};
+  const sens = stats.sens_slope || {};
+  const meanVal = stats.mean != null ? stats.mean : 0;
+  const slopePerMonth = sens.slope_per_month || 0;
+  const midIdx = (series.length - 1) / 2;
+
+  // Pre-calculate trend line and climatology baseline for each point
+  const points = series.map((pt, i) => {
+    const anom = anomalies[i] || {};
+    const trendVal = meanVal + slopePerMonth * (i - midIdx);
+    return {
+      date: pt.date,
+      value: pt.value,
+      trend_value: trendVal,
+      climatology_mean: anom.climatology_mean,
+      anomaly: anom.anomaly
+    };
+  });
+
+  const padLeft = 65, padRight = 30, padTop = 20, padBottom = 40;
+  const chartW = width - padLeft - padRight;
+  const chartH = height - padTop - padBottom;
+
+  // Find min and max
+  let minVal = Infinity, maxVal = -Infinity;
+  points.forEach(pt => {
+    if (pt.value != null) {
+      if (pt.value < minVal) minVal = pt.value;
+      if (pt.value > maxVal) maxVal = pt.value;
+    }
+    if (pt.trend_value != null) {
+      if (pt.trend_value < minVal) minVal = pt.trend_value;
+      if (pt.trend_value > maxVal) maxVal = pt.trend_value;
+    }
+    if (pt.climatology_mean != null) {
+      if (pt.climatology_mean < minVal) minVal = pt.climatology_mean;
+      if (pt.climatology_mean > maxVal) maxVal = pt.climatology_mean;
+    }
+  });
+
+  const range = maxVal - minVal || 1;
+  const yMin = minVal - range * 0.08;
+  const yMax = maxVal + range * 0.08;
+  const yRange = yMax - yMin;
+
+  const getX = i => padLeft + (i / (points.length - 1)) * chartW;
+  const getY = val => padTop + chartH - ((val - yMin) / yRange) * chartH;
+
+  // Clear background
+  ctx.fillStyle = '#060a0f';
+  ctx.fillRect(0, 0, width, height);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+  ctx.lineWidth = 1;
+  const yTicks = 5;
+  ctx.fillStyle = '#64748b';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'right';
+
+  for (let t = 0; t <= yTicks; t++) {
+    const val = yMin + (t / yTicks) * yRange;
+    const y = getY(val);
+    ctx.beginPath();
+    ctx.moveTo(padLeft, y);
+    ctx.lineTo(width - padRight, y);
+    ctx.stroke();
+    ctx.fillText(val.toFixed(2), padLeft - 8, y + 4);
+  }
+
+  // X ticks (Year boundaries)
+  ctx.textAlign = 'center';
+  points.forEach((pt, i) => {
+    if (pt.date.endsWith('-01') || i === 0 || i === points.length - 1) {
+      const x = getX(i);
+      ctx.beginPath();
+      ctx.moveTo(x, padTop);
+      ctx.lineTo(x, padTop + chartH);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.stroke();
+      ctx.fillText(pt.date, x, padTop + chartH + 18);
+    }
+  });
+
+  // 1. Draw Climatology Baseline (dashed amber)
+  ctx.beginPath();
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = 'rgba(245, 158, 11, 0.65)';
+  ctx.lineWidth = 1.5;
+  points.forEach((pt, i) => {
+    if (pt.climatology_mean != null) {
+      const x = getX(i), y = getY(pt.climatology_mean);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+  });
+  ctx.stroke();
+
+  // 2. Draw Sen's Slope Trend Line (dashed bright cyan)
+  ctx.beginPath();
+  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2.5;
+  points.forEach((pt, i) => {
+    if (pt.trend_value != null) {
+      const x = getX(i), y = getY(pt.trend_value);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+  });
+  ctx.stroke();
+  ctx.setLineDash([]); // reset dash
+
+  // 3. Draw Observed Values (solid emerald line + subtle gradient fill)
+  const grad = ctx.createLinearGradient(0, padTop, 0, padTop + chartH);
+  grad.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
+  grad.addColorStop(1, 'rgba(16, 185, 129, 0.00)');
+
+  ctx.beginPath();
+  points.forEach((pt, i) => {
+    if (pt.value != null) {
+      const x = getX(i), y = getY(pt.value);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+  });
+  // fill below line
+  ctx.lineTo(getX(points.length - 1), padTop + chartH);
+  ctx.lineTo(getX(0), padTop + chartH);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // line stroke
+  ctx.beginPath();
+  ctx.strokeStyle = '#10b981';
+  ctx.lineWidth = 2;
+  points.forEach((pt, i) => {
+    if (pt.value != null) {
+      const x = getX(i), y = getY(pt.value);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+  });
+  ctx.stroke();
+
+  // Dots for observed points
+  points.forEach((pt, i) => {
+    if (pt.value != null) {
+      const x = getX(i), y = getY(pt.value);
+      ctx.beginPath();
+      ctx.arc(x, y, i === trendCanvasHoverIdx ? 5 : 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = i === trendCanvasHoverIdx ? '#38bdf8' : '#10b981';
+      ctx.fill();
+      if (i === trendCanvasHoverIdx) {
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+  });
+
+  ctx.restore();
+
+  // Attach hover handlers once
+  if (!canvas._hasHover) {
+    canvas._hasHover = true;
+    const tooltip = $('trendLabTooltip');
+
+    canvas.addEventListener('mousemove', e => {
+      if (!state.trendLabData) return;
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const cW = rect.width - padLeft - padRight;
+      const rawIdx = Math.round(((mouseX - padLeft) / cW) * (points.length - 1));
+      const idx = Math.max(0, Math.min(points.length - 1, rawIdx));
+
+      if (idx !== trendCanvasHoverIdx) {
+        trendCanvasHoverIdx = idx;
+        renderTrendLabCanvas(state.trendLabData);
+      }
+
+      const pt = points[idx];
+      if (pt && tooltip) {
+        tooltip.innerHTML = `
+          <strong>${pt.date}</strong><br>
+          Observed: <b>${pt.value != null ? pt.value.toFixed(3) : 'Missing'}</b><br>
+          Sen's Trend: <b>${pt.trend_value != null ? pt.trend_value.toFixed(3) : '—'}</b><br>
+          Monthly Anomaly: <b>${pt.anomaly != null ? (pt.anomaly > 0 ? '+' : '') + pt.anomaly.toFixed(3) : '—'}</b>
+        `;
+        tooltip.classList.remove('hidden');
+        tooltip.style.left = `${Math.min(rect.width - 160, Math.max(10, mouseX + 15))}px`;
+        tooltip.style.top = `${Math.max(10, e.clientY - rect.top - 70)}px`;
+      }
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      trendCanvasHoverIdx = -1;
+      if (tooltip) tooltip.classList.add('hidden');
+      if (state.trendLabData) renderTrendLabCanvas(state.trendLabData);
+    });
+  }
+}
+
+async function runTrendLabVarCompare() {
+  const panel = $('trendCompareSection');
+  if (!panel) return;
+  panel.classList.remove('hidden');
+
+  const aoi = $('trendAoiSelect')?.value || 'kodagu';
+  const currentVar = $('trendVarSelect')?.value || 'modis_ndvi';
+  const compVar = currentVar === 'modis_ndvi' ? 'gpm_precipitation' : (currentVar === 'gpm_precipitation' ? 'gldas_soil_moisture' : 'modis_ndvi');
+  const start_year = parseInt($('trendStartYear')?.value || '2018', 10);
+  const end_year = parseInt($('trendEndYear')?.value || '2024', 10);
+
+  setText('compareSectionTitle', `Association: ${currentVar.toUpperCase()} vs ${compVar.toUpperCase()}`);
+  setText('compInterpretation', 'Calculating non-parametric Spearman and parametric Pearson correlation matrix…');
+
+  try {
+    const res = await api('/api/trends/compare-variables', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        aoi: aoi,
+        var_x: currentVar,
+        var_y: compVar,
+        start_year: start_year,
+        end_year: end_year,
+        custom_coords: aoi === 'custom' ? [state.lat, state.lon] : null
+      })
+    });
+
+    const corr = res.correlation || {};
+    setText('compPearson', corr.pearson_r != null ? corr.pearson_r.toFixed(3) : '—');
+    setText('compSpearman', corr.spearman_rho != null ? corr.spearman_rho.toFixed(3) : '—');
+    setText('compPVal', corr.spearman_p_value != null ? corr.spearman_p_value.toFixed(4) : (corr.pearson_p_value != null ? corr.pearson_p_value.toFixed(4) : '—'));
+    setText('compSig', corr.is_significant ? 'SIGNIFICANT (p < 0.05)' : 'NOT SIGNIFICANT (p ≥ 0.05)');
+    setText('compInterpretation', corr.interpretation || 'Correlation analysis complete.');
+  } catch (err) {
+    setText('compInterpretation', `Error computing correlation: ${err.message}`);
+  }
+}
+
+async function runTrendLabRegionCompare() {
+  const panel = $('trendCompareSection');
+  if (!panel) return;
+  panel.classList.remove('hidden');
+
+  const currentAoi = $('trendAoiSelect')?.value || 'kodagu';
+  const targetAoi = currentAoi === 'kodagu' ? 'bandipur' : 'kodagu';
+  const currentVar = $('trendVarSelect')?.value || 'modis_ndvi';
+  const start_year = parseInt($('trendStartYear')?.value || '2018', 10);
+  const end_year = parseInt($('trendEndYear')?.value || '2024', 10);
+
+  setText('compareSectionTitle', `Regional Comparison: ${currentAoi.toUpperCase()} vs ${targetAoi.toUpperCase()} (${currentVar.toUpperCase()})`);
+  setText('compInterpretation', "Computing regional Sen's slopes and Mann-Kendall statistics for both ecosystems…");
+
+  try {
+    const res = await api('/api/trends/compare-regions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        aoi_a: currentAoi,
+        aoi_b: targetAoi,
+        variable: currentVar,
+        start_year: start_year,
+        end_year: end_year
+      })
+    });
+
+    const rA = res.region_a || {}, rB = res.region_b || {};
+    const nameA = rA.aoi?.name || currentAoi;
+    const nameB = rB.aoi?.name || targetAoi;
+    const slopeA = rA.statistics?.sens_slope?.annual_rate ?? 0;
+    const slopeB = rB.statistics?.sens_slope?.annual_rate ?? 0;
+    const zA = rA.statistics?.mann_kendall?.z ?? 0;
+    const zB = rB.statistics?.mann_kendall?.z ?? 0;
+    const diff = slopeA - slopeB;
+
+    setText('compPearson', `${nameA.split(' ')[0]}: ${(slopeA > 0 ? '+' : '') + slopeA.toFixed(4)}/yr`);
+    setText('compSpearman', `${nameB.split(' ')[0]}: ${(slopeB > 0 ? '+' : '') + slopeB.toFixed(4)}/yr`);
+    setText('compPVal', `Δ: ${(diff > 0 ? '+' : '') + diff.toFixed(4)}/yr`);
+    setText('compSig', Math.abs(diff) > 0.005 ? 'DIFFERENTIAL TRAJECTORY' : 'SIMILAR TRAJECTORIES');
+    setText('compInterpretation', `Region A (${nameA}): Sen's annual rate ${(slopeA > 0 ? '+' : '') + slopeA.toFixed(4)}/yr (Z=${(zA > 0 ? '+' : '') + zA.toFixed(2)}). Region B (${nameB}): Sen's annual rate ${(slopeB > 0 ? '+' : '') + slopeB.toFixed(4)}/yr (Z=${(zB > 0 ? '+' : '') + zB.toFixed(2)}). Net difference: ${(diff > 0 ? '+' : '') + diff.toFixed(4)} units/year.`);
+  } catch (err) {
+    setText('compInterpretation', `Error comparing regions: ${err.message}`);
+  }
+}
+
+async function exportTrendLabPDF() {
+  const aoi = $('trendAoiSelect')?.value || 'kodagu';
+  const variable = $('trendVarSelect')?.value || 'modis_ndvi';
+  const start_year = parseInt($('trendStartYear')?.value || '2018', 10);
+  const end_year = parseInt($('trendEndYear')?.value || '2024', 10);
+
+  toast('Generating official NASA Evidence PDF report…');
+  try {
+    const res = await fetch('/api/trends/report/pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        aoi: aoi,
+        variable: variable,
+        start_year: start_year,
+        end_year: end_year,
+        custom_coords: aoi === 'custom' ? [state.lat, state.lon] : null
+      })
+    });
+
+    if (!res.ok) throw new Error('PDF export failed');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nasa-trend-report-${aoi}-${variable}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+    toast('NASA trend PDF report downloaded');
+  } catch (err) {
+    toast(`Export error: ${err.message}`);
+  }
+}
+
+async function exportTrendLabCSV() {
+  const aoi = $('trendAoiSelect')?.value || 'kodagu';
+  const variable = $('trendVarSelect')?.value || 'modis_ndvi';
+  const start_year = parseInt($('trendStartYear')?.value || '2018', 10);
+  const end_year = parseInt($('trendEndYear')?.value || '2024', 10);
+
+  toast('Exporting observations CSV…');
+  try {
+    const res = await fetch('/api/trends/report/csv', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        aoi: aoi,
+        variable: variable,
+        start_year: start_year,
+        end_year: end_year,
+        custom_coords: aoi === 'custom' ? [state.lat, state.lon] : null
+      })
+    });
+
+    if (!res.ok) throw new Error('CSV export failed');
+    const text = await res.text();
+    const blob = new Blob([text], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nasa-trend-data-${aoi}-${variable}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+    toast('NASA observations CSV downloaded');
+  } catch (err) {
+    toast(`Export error: ${err.message}`);
+  }
+}

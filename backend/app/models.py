@@ -106,3 +106,75 @@ class PersistInvestigationRequest(BaseModel):
     lon: float = Field(ge=-180, le=180)
     place: str = "India"
     payload: dict[str, Any]
+
+
+class TrendAnalysisRequest(BaseModel):
+    aoi_id: str = "kodagu"
+    variable_id: str = "modis_ndvi"
+    start_year: int = 2018
+    end_year: int = 2024
+    custom_lat: float | None = None
+    custom_lon: float | None = None
+    alpha: float = 0.05
+    # Request aliases
+    aoi: str | None = None
+    variable: str | None = None
+    custom_coords: list[float] | None = None
+
+    def resolved_aoi(self) -> str:
+        return self.aoi or self.aoi_id
+
+    def resolved_variable(self) -> str:
+        return self.variable or self.variable_id
+
+    def resolved_lat(self) -> float | None:
+        if self.custom_lat is not None:
+            return self.custom_lat
+        if self.custom_coords and len(self.custom_coords) > 0:
+            return self.custom_coords[0]
+        return None
+
+    def resolved_lon(self) -> float | None:
+        if self.custom_lon is not None:
+            return self.custom_lon
+        if self.custom_coords and len(self.custom_coords) > 1:
+            return self.custom_coords[1]
+        return None
+
+
+class TrendVariableCompareRequest(BaseModel):
+    aoi_id: str = "kodagu"
+    variable_a: str = "modis_ndvi"
+    variable_b: str = "gpm_precipitation"
+    start_year: int = 2018
+    end_year: int = 2024
+    alpha: float = 0.05
+    # Request aliases
+    aoi: str | None = None
+    var_x: str | None = None
+    var_y: str | None = None
+    custom_coords: list[float] | None = None
+
+    def resolved_aoi(self) -> str:
+        return self.aoi or self.aoi_id
+
+    def resolved_var_a(self) -> str:
+        return self.var_x or self.variable_a
+
+    def resolved_var_b(self) -> str:
+        return self.var_y or self.variable_b
+
+
+class TrendRegionCompareRequest(BaseModel):
+    aoi_a: str = "kodagu"
+    aoi_b: str = "bandipur"
+    variable_id: str = "modis_ndvi"
+    start_year: int = 2018
+    end_year: int = 2024
+    alpha: float = 0.05
+    # Request aliases
+    variable: str | None = None
+
+    def resolved_variable(self) -> str:
+        return self.variable or self.variable_id
+

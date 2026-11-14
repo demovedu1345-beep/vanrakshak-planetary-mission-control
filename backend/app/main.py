@@ -13,6 +13,11 @@ from app.models import (
     SourceResult, Provenance, RiskInputs, CarbonRequest, PatrolRequest, WhatIfRequest,
     ForestDoctorInputs, RecoveryInputs, CorrelationInputs, RegionComparisonRequest,
     ThreatPredictionRequest, PersistInvestigationRequest,
+    TrendAnalysisRequest, TrendVariableCompareRequest, TrendRegionCompareRequest,
+)
+from app.services.nasa_trend_engine import (
+    NASA_VARIABLE_CATALOGUE, VERIFIED_AOIS, run_trend_analysis,
+    multi_variable_correlation, generate_trend_report_pdf, generate_trend_data_csv,
 )
 from app.adapters import (
     OpenMeteoAdapter, CopernicusAdapter, SoilGridsAdapter, OverpassAdapter,
@@ -2168,7 +2173,32 @@ async def vegetation_series_ep(
         results=await asyncio.gather(*(read_scene(f) for f in feats))
         rows=[value for ok,value in results if ok]
         errors=[value for ok,value in results if not ok]
-        if len(rows)<2: raise HTTPException(503,"Too few Sentinel-2 scenes could be read for a time series")
+        if len(rows)<2:
+            try:
+                modis_trend = await run_trend_analysis("custom", "modis_ndvi", start_year=sdate.year, end_year=edate.year, custom_lat=lat, custom_lon=lon)
+                observations = []
+                for pt in (modis_trend.get("time_series") or []):
+                    val = float(pt.get("value", 0.5))
+                    d_str = str(pt.get("date", "2023-01-01"))
+                    if len(d_str) == 7:
+                        d_str = f"{d_str}-15"
+                    observations.append({
+                        "datetime": f"{d_str}T12:00:00Z",
+                        "mean_ndvi": round(val, 4),
+                        "forest_fraction": round(max(0.0, min(1.0, (val - 0.2) / 0.6)), 3),
+                        "cloud_cover": 0.0,
+                        "valid_pixel_pct": pt.get("valid_pixel_pct", 95.0),
+                    })
+                if len(observations) >= 2:
+                    return {
+                        "source": "NASA MODIS MOD13A3 Monthly L3 (Vegetation Index Earth Observation)",
+                        "observations": observations,
+                        "errors": errors,
+                        "label": "NASA_MODIS_VEGETATION_METRIC"
+                    }
+            except Exception:
+                pass
+            raise HTTPException(503,"Too few Sentinel-2 scenes could be read for a time series")
         return {"source":"Sentinel-2 L2A / Earth Search","observations":rows,"errors":errors,"label":"DERIVED_METRIC"}
 
     return await cached_async(key,600,produce)
@@ -2256,6 +2286,126 @@ def report(payload: dict):
     for k, v in payload.items():
         if k != "title": lines.append(f"{k}: {json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v}")
     return Response(pdf_report(title, lines), media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=vanrakshak-report.pdf"})
+
+
+# --- NASA TREND LAB / EARTH SYSTEM TREND DETECTIVE API ---
+
+@app.get("/api/trends/catalogue")
+def trends_catalogue():
+    return {
+        "ok": True,
+        "variables": NASA_VARIABLE_CATALOGUE,
+        "verified_aois": VERIFIED_AOIS,
+        "challenge": "NASA Space Apps Challenge 2026: Be an Earth System Trend Detective!"
+    }
+
+
+@app.post("/api/trends/analyze")
+async def trends_analyze(req: TrendAnalysisRequest):
+    result = await run_trend_analysis(
+        aoi_id=req.resolved_aoi(),
+        variable_id=req.resolved_variable(),
+        start_year=req.start_year,
+        end_year=req.end_year,
+        custom_lat=req.resolved_lat(),
+        custom_lon=req.resolved_lon(),
+        alpha=req.alpha
+    )
+    if not result.get("ok"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Analysis failed"))
+    return result
+
+
+@app.post("/api/trends/compare-variables")
+async def trends_compare_variables(req: TrendVariableCompareRequest):
+    res_a = await run_trend_analysis(
+        aoi_id=req.resolved_aoi(),
+        variable_id=req.resolved_var_a(),
+        start_year=req.start_year,
+        end_year=req.end_year,
+        alpha=req.alpha
+    )
+    res_b = await run_trend_analysis(
+        aoi_id=req.resolved_aoi(),
+        variable_id=req.resolved_var_b(),
+        start_year=req.start_year,
+        end_year=req.end_year,
+        alpha=req.alpha
+    )
+    if not res_a.get("ok") or not res_b.get("ok"):
+        raise HTTPException(status_code=400, detail="Failed to retrieve time series for one or both variables.")
+    corr = multi_variable_correlation(res_a.get("time_series", []), res_b.get("time_series", []))
+    return {
+        "ok": True,
+        "aoi": res_a.get("aoi"),
+        "variable_a": res_a,
+        "variable_b": res_b,
+        "correlation": corr
+    }
+
+
+@app.post("/api/trends/compare-regions")
+async def trends_compare_regions(req: TrendRegionCompareRequest):
+    var_id = req.resolved_variable()
+    res_a = await run_trend_analysis(aoi_id=req.aoi_a, variable_id=var_id, start_year=req.start_year, end_year=req.end_year, alpha=req.alpha)
+    res_b = await run_trend_analysis(aoi_id=req.aoi_b, variable_id=var_id, start_year=req.start_year, end_year=req.end_year, alpha=req.alpha)
+    if not res_a.get("ok") or not res_b.get("ok"):
+        raise HTTPException(status_code=400, detail="Failed to retrieve time series for one or both regions.")
+    return {
+        "ok": True,
+        "variable": res_a.get("variable"),
+        "region_a": res_a,
+        "region_b": res_b
+    }
+
+
+@app.post("/api/trends/report/pdf")
+async def trends_report_pdf(payload: dict):
+    if "time_series" not in payload:
+        aoi_id = payload.get("aoi") or payload.get("aoi_id", "kodagu")
+        variable_id = payload.get("variable") or payload.get("variable_id", "modis_ndvi")
+        coords = payload.get("custom_coords") or []
+        custom_lat = payload.get("custom_lat") or (coords[0] if len(coords) > 0 else None)
+        custom_lon = payload.get("custom_lon") or (coords[1] if len(coords) > 1 else None)
+        payload = await run_trend_analysis(
+            aoi_id=aoi_id,
+            variable_id=variable_id,
+            start_year=payload.get("start_year", 2018),
+            end_year=payload.get("end_year", 2024),
+            custom_lat=custom_lat,
+            custom_lon=custom_lon
+        )
+    pdf_bytes = generate_trend_report_pdf(payload)
+    return Response(
+        pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=nasa-trend-report.pdf"}
+    )
+
+
+@app.post("/api/trends/report/csv")
+async def trends_report_csv(payload: dict):
+    if "time_series" not in payload:
+        aoi_id = payload.get("aoi") or payload.get("aoi_id", "kodagu")
+        variable_id = payload.get("variable") or payload.get("variable_id", "modis_ndvi")
+        coords = payload.get("custom_coords") or []
+        custom_lat = payload.get("custom_lat") or (coords[0] if len(coords) > 0 else None)
+        custom_lon = payload.get("custom_lon") or (coords[1] if len(coords) > 1 else None)
+        payload = await run_trend_analysis(
+            aoi_id=aoi_id,
+            variable_id=variable_id,
+            start_year=payload.get("start_year", 2018),
+            end_year=payload.get("end_year", 2024),
+            custom_lat=custom_lat,
+            custom_lon=custom_lon
+        )
+    csv_str = generate_trend_data_csv(payload)
+    return Response(
+        csv_str,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=nasa-trend-data.csv"}
+    )
+
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

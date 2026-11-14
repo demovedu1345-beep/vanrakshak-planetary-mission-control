@@ -3,9 +3,14 @@ import asyncio
 from io import BytesIO
 
 import numpy as np
-import rasterio
-from rasterio.io import MemoryFile
-from rasterio.warp import transform
+try:
+    import rasterio
+    from rasterio.io import MemoryFile
+    from rasterio.warp import transform
+except ImportError:
+    rasterio = None
+    MemoryFile = None
+    transform = None
 
 from app.adapters.base import BaseAdapter, AdapterError
 from app.config import settings

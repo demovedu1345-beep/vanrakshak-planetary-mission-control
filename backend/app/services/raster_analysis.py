@@ -1,11 +1,21 @@
 from __future__ import annotations
 from io import BytesIO
 import numpy as np
-import rasterio
-from rasterio.io import MemoryFile
-from rasterio.features import shapes
+try:
+    import rasterio
+    from rasterio.io import MemoryFile
+    from rasterio.features import shapes
+except ImportError:
+    rasterio = None
+    MemoryFile = None
+    shapes = None
+
 from shapely.geometry import shape, mapping
-from scipy.ndimage import label
+
+try:
+    from scipy.ndimage import label
+except ImportError:
+    label = None
 
 class RasterInputError(ValueError): pass
 

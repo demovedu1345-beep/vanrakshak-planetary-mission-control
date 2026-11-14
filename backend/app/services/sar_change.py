@@ -2,13 +2,32 @@ from __future__ import annotations
 from math import cos, radians
 from urllib.parse import quote
 import numpy as np
-import rasterio
-from affine import Affine
-from rasterio.crs import CRS
-from rasterio.windows import Window, from_bounds
-from rasterio.warp import transform_bounds, reproject, Resampling, transform_geom
-from rasterio.features import shapes
-from scipy.ndimage import median_filter
+try:
+    import rasterio
+    from affine import Affine
+    from rasterio.crs import CRS
+    from rasterio.windows import Window, from_bounds
+    from rasterio.warp import transform_bounds, reproject, Resampling, transform_geom
+    from rasterio.features import shapes
+except ImportError:
+    rasterio = None
+    Affine = None
+    CRS = None
+    Window = None
+    from_bounds = None
+    transform_bounds = None
+    reproject = None
+    class _DummyResampling:
+        bilinear = 1
+        nearest = 0
+    Resampling = _DummyResampling
+    transform_geom = None
+    shapes = None
+
+try:
+    from scipy.ndimage import median_filter
+except ImportError:
+    median_filter = None
 
 class SARChangeError(RuntimeError):
     pass

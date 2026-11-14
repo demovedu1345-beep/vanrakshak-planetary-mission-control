@@ -42,8 +42,8 @@ button{cursor:pointer}
 .modal{position:fixed;inset:0;z-index:300;background:#000b;display:flex;align-items:center;justify-content:center;padding:22px}.modal-card{width:min(1200px,94vw);height:min(820px,90vh);background:#071822;border:1px solid #28404b;border-radius:14px;padding:15px;box-shadow:0 20px 80px #000c;display:flex;flex-direction:column;gap:10px;overflow:auto}.compare-modal-card{max-width:1280px}.time-modal-card{max-width:950px;height:min(760px,88vh)}.intelligence-modal-card{max-width:980px;height:auto;max-height:88vh}.patrol-modal-card{max-width:760px;height:auto}.about-modal-card{max-width:650px;height:auto}.compare-controls{display:flex;gap:8px;align-items:end;flex-wrap:wrap}.compare-controls label{min-width:160px}.compare-shell{position:relative;flex:1;min-height:500px;border:1px solid var(--line);border-radius:10px;overflow:hidden;--split:50%}.compare-map{position:absolute;inset:0}.compare-after-wrap{position:absolute;left:0;top:0;bottom:0;width:50%;overflow:hidden;border-right:2px solid white}.compare-after-wrap .compare-map{width:100%;max-width:none}.compare-slider{position:absolute;z-index:20;left:10%;right:10%;bottom:15px;width:80%}.time-map{height:420px;border:1px solid var(--line);border-radius:10px;overflow:hidden}.timeline{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;overflow:auto}.timeline-item{border:1px solid var(--line);background:#0b1b25;color:white;border-radius:7px;padding:8px;text-align:left}.timeline-item.active{border-color:#20d67b;background:#0f4937}.timeline-item small{display:block;color:#8ea59f}.intelligence-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.compact-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.mini-output{white-space:pre-wrap;max-height:250px;overflow:auto;background:#07131b;border:1px solid var(--line);border-radius:7px;padding:9px;color:#bcd4cb;font-size:10px}.action-row{display:flex;gap:8px;flex-wrap:wrap}textarea{width:100%;resize:vertical}.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:500;background:#0b2531;color:white;border:1px solid #355563;border-radius:9px;padding:10px 15px;box-shadow:var(--shadow)}
 
 @media(max-width:1400px){.workspace{grid-template-columns:minmax(0,1fr) 500px}.topbar{grid-template-columns:300px minmax(320px,1fr) 500px}.summary-card strong{font-size:15px}}
-@media(max-width:1180px){body{overflow:auto}.app-shell{height:auto;min-height:100vh;grid-template:62px auto/72px 1fr}.topbar{grid-template-columns:220px 1fr auto}.top-nav button:not(.avatar-btn){display:none}.workspace{grid-template-columns:1fr}.right-panel{min-height:800px}.left-stack{grid-template-rows:650px 300px}.sidebar .nav span:not(.nav-icon){display:none}.nav{grid-template-columns:1fr}.nav-badge{position:absolute;right:5px;top:5px}.assistant-card{display:none}}
-@media(max-width:800px){.app-shell{grid-template-columns:1fr;grid-template-areas:"top" "work"}.sidebar{display:none}.topbar{grid-template-columns:1fr auto;height:auto;padding:10px}.brand-copy small{display:none}.search-shell{grid-column:1/-1;grid-row:2}.workspace{grid-area:work}.left-stack{grid-template-rows:560px 460px}.summary-row{grid-template-columns:repeat(2,1fr);overflow:auto}.charts-row{grid-template-columns:1fr}.right-panel{padding:10px}.right-tabs{grid-template-columns:repeat(2,1fr)}.metric-strip,.impact-strip{grid-template-columns:repeat(2,1fr)}.cause-card{grid-template-columns:1fr}.cause-half{border-right:0;border-bottom:1px solid var(--line);padding-bottom:10px}.major-actions{grid-template-columns:1fr!important}.intelligence-grid,.compact-fields{grid-template-columns:1fr}.modal{padding:7px}.drawer{right:6px;left:6px;width:auto}.top-nav{gap:8px}}
+@media(max-width:1180px){body{overflow:auto}.app-shell{height:auto;min-height:100vh;grid-template-rows:62px auto;grid-template-columns:72px 1fr;grid-template-areas:"top top" "side work"}.topbar{grid-template-columns:220px 1fr auto}.top-nav button:not(.avatar-btn):not(#trendLabTop){display:none}.workspace{grid-template-columns:1fr}.right-panel{min-height:800px}.left-stack{grid-template-rows:650px 300px}.sidebar .nav span:not(.nav-icon){display:none}.nav{grid-template-columns:1fr}.nav-badge{position:absolute;right:5px;top:5px}.assistant-card{display:none}}
+@media(max-width:800px){.app-shell{grid-template-columns:1fr;grid-template-rows:auto 1fr;grid-template-areas:"top" "work"}.sidebar{display:none}.topbar{grid-template-columns:1fr auto;height:auto;padding:10px}.brand-copy small{display:none}.search-shell{grid-column:1/-1;grid-row:2}.workspace{grid-area:work}.left-stack{grid-template-rows:560px 460px}.summary-row{grid-template-columns:repeat(2,1fr);overflow:auto}.charts-row{grid-template-columns:1fr}.right-panel{padding:10px}.right-tabs{grid-template-columns:repeat(2,1fr)}.metric-strip,.impact-strip{grid-template-columns:repeat(2,1fr)}.cause-card{grid-template-columns:1fr}.cause-half{border-right:0;border-bottom:1px solid var(--line);padding-bottom:10px}.major-actions{grid-template-columns:1fr!important}.intelligence-grid,.compact-fields{grid-template-columns:1fr}.modal{padding:7px}.drawer{right:6px;left:6px;width:auto}.top-nav{gap:8px}}
 
 
 /* Keep Leaflet panes within their map, below drawers and modals. */
@@ -113,7 +113,7 @@ button,input,select,textarea{touch-action:manipulation}
 
 @media(max-width:1180px){
   body{overflow:auto;overscroll-behavior:auto}
-  .app-shell{height:auto;min-height:100dvh}
+  .app-shell{height:auto;min-height:100dvh;grid-template-rows:62px auto;grid-template-columns:72px 1fr;grid-template-areas:"top top" "side work"}
   .workspace,.left-stack{overflow:visible}
   .left-stack{grid-template-rows:650px auto}
   .bottom-analytics,.right-panel{overflow:visible}
@@ -121,6 +121,7 @@ button,input,select,textarea{touch-action:manipulation}
   .right-tabs{top:0}
 }
 @media(max-width:800px){
+  .app-shell{grid-template-columns:1fr;grid-template-rows:auto 1fr;grid-template-areas:"top" "work"}
   .left-stack{grid-template-rows:560px auto}
   .environment-grid{grid-template-columns:1fr}
   .env-section-title,.env-card.wide{grid-column:1}
@@ -322,3 +323,386 @@ button,input,select,textarea{touch-action:manipulation}
 .judge-evidence-list b{display:block;color:#68dda7;font-size:9.5px}
 .judge-evidence-list span{display:block;margin-top:3px;color:#b6c9c3;font-size:9px;line-height:1.45}
 @media(max-width:700px){.judge-proof-grid{grid-template-columns:1fr}}
+
+/* ============================================================
+   NASA TREND LAB — EARTH SYSTEM TREND DETECTIVE STYLES
+   ============================================================ */
+.trendlab-modal-card {
+  max-width: 1240px;
+  height: min(880px, 94vh);
+  background: #071722;
+  border: 1px solid #1c3d4f;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trendlab-controls-bar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  background: #091c28;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.trendlab-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.trendlab-control-group label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #8da49f;
+  font-weight: 700;
+}
+
+.trendlab-select {
+  background: #0a1b26;
+  color: #eff7f4;
+  border: 1px solid #284756;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 11px;
+  outline: none;
+}
+.trendlab-select:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px #38bdf822;
+}
+
+.year-range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mini-select {
+  padding: 8px 6px;
+  width: 76px;
+}
+
+.trendlab-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.trendlab-btn {
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.trendlab-btn.primary-btn {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #38bdf8;
+}
+.trendlab-btn.primary-btn:hover {
+  background: #0369a1;
+}
+
+.trendlab-btn.secondary-btn {
+  background: #0f2736;
+  color: #e0f2fe;
+  border-color: #244c62;
+}
+.trendlab-btn.secondary-btn:hover {
+  background: #17384c;
+}
+
+.trendlab-btn.export-btn {
+  background: #0f3529;
+  color: #6ee7b7;
+  border-color: #1a634c;
+}
+.trendlab-btn.export-btn:hover {
+  background: #154c3b;
+}
+
+.trendlab-provenance-banner {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: #07151f;
+  border: 1px solid #1c3545;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.prov-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #0a1b25;
+  border: 1px solid #1e3a4a;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 10px;
+}
+.prov-pill small {
+  color: #7b968e;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.prov-pill b {
+  color: #bae6fd;
+}
+
+.badge-tag {
+  background: #0e3046;
+  color: #38bdf8;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+}
+.badge-tag.live-tag {
+  background: #064e3b;
+  color: #34d399;
+}
+
+.trendlab-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.trend-stat-card {
+  background: #081a25;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 11px;
+  min-width: 0;
+}
+.trend-stat-card small {
+  display: block;
+  font-size: 8.5px;
+  text-transform: uppercase;
+  color: #7f9991;
+  letter-spacing: 0.5px;
+}
+.stat-main-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 4px;
+}
+.stat-main-row strong {
+  font-size: 16px;
+  color: #f1f8f5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stat-unit {
+  font-size: 9px;
+  color: #8da49f;
+}
+.stat-ci-row {
+  font-size: 8.5px;
+  color: #6ee7b7;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trend-stat-card.highlight-card {
+  border-left: 3px solid #38bdf8;
+  background: #071f2d;
+}
+.trend-stat-card.highlight-card strong {
+  color: #38bdf8;
+  font-size: 13px;
+}
+
+.trendlab-chart-wrapper {
+  background: #081721;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.trendlab-chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.trendlab-chart-head strong {
+  font-size: 13px;
+  color: #e0f2fe;
+}
+.trendlab-chart-head small {
+  display: block;
+  font-size: 9.5px;
+  color: #7b968e;
+}
+.trendlab-legend-pills {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  color: #cad8d4;
+}
+.pill-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.pill-dot.obs-dot { background: #10b981; }
+.pill-dot.trend-dot { background: #f59e0b; }
+.pill-dot.clim-dot { background: #64748b; }
+
+.trendlab-canvas-container {
+  position: relative;
+  width: 100%;
+  height: 260px;
+  background: #06121b;
+  border: 1px solid #142a38;
+  border-radius: 8px;
+  overflow: hidden;
+}
+#trendLabCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.trendlab-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #0f2738fa;
+  border: 1px solid #38bdf8;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 10px;
+  color: #fff;
+  box-shadow: 0 4px 16px #000a;
+  z-index: 50;
+  white-space: nowrap;
+}
+
+.trendlab-compare-panel {
+  background: #091d2a;
+  border: 1px solid #1f4358;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.compare-metrics-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.compare-stat-chip {
+  background: #07151f;
+  border: 1px solid #1a3648;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+.compare-stat-chip b { color: #818cf8; }
+.compare-stat-chip span { color: #e0f2fe; margin-left: 4px; }
+.compare-note {
+  font-size: 10.5px;
+  color: #a7f3d0;
+  margin: 6px 0 0;
+  line-height: 1.4;
+}
+
+.trendlab-explanation-card {
+  margin-top: 4px;
+  background: #081721;
+}
+.trendlab-qa-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.qa-item {
+  background: #091a26;
+  border: 1px solid #1b3546;
+  border-radius: 7px;
+  padding: 9px 12px;
+}
+.qa-q {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.qa-num {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0369a1;
+  color: #fff;
+  font-size: 9.5px;
+}
+.qa-a {
+  margin-top: 5px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: #cbd5e1;
+  padding-left: 25px;
+}
+.qa-item.caution-qa {
+  border-left: 3px solid #f59e0b;
+}
+.qa-item.caution-qa .qa-num {
+  background: #b45309;
+}
+
+@media(max-width: 1100px) {
+  .trendlab-stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media(max-width: 700px) {
+  .trendlab-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .trendlab-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+#trendLabTop {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  background: #0c2a3b !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  border-radius: 999px !important;
+  padding: 6px 12px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#trendLabTop:hover {
+  background: #10364c !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3) !important;
+}

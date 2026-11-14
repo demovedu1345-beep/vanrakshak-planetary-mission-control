@@ -1,8 +1,16 @@
 from __future__ import annotations
 from io import BytesIO
 import numpy as np
-from rasterio.io import MemoryFile
-from scipy.ndimage import label, binary_erosion
+try:
+    from rasterio.io import MemoryFile
+except ImportError:
+    MemoryFile = None
+
+try:
+    from scipy.ndimage import label, binary_erosion
+except ImportError:
+    label = None
+    binary_erosion = None
 
 class FragmentationInputError(ValueError):
     pass
